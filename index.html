@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>青蛙過河大冒險 (Frog River Adventure) - 水林國中資訊科技</title>
+    <!-- 引入 html2canvas 支援通關獎狀截圖 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        /* --- 🎮 遊戲視覺設計規範 (Arcade Game UI SSOT) --- */
+        :root {
+            --sky-top: #bae6fd;
+            --sky-bottom: #e0f2fe;
+            --grass-light: #86efac;
+            --grass-dark: #22c55e;
+            --water-top: #38bdf8;
+            --water-bottom: #0284c7;
+            
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --panel-border: #cbd5e1;
+            --text-title: #0f172a;
+            --text-sub: #475569;
+
+            --btn-green: #10b981;
+            --btn-green-edge: #047857;
+            --btn-blue: #3b82f6;
+            --btn-blue-edge: #1d4ed8;
+            --btn-purple: #8b5cf6;
+            --btn-purple-edge: #6d28d9;
+            --btn-amber: #f59e0b;
+            --btn-amber-edge: #b45309;
+            --btn-rose: #f43f5e;
+            --btn-rose-edge: #be123c;
+
+            --touch-min: 46px; /* 適配 iPad 與智慧黑板手指點擊 */
+            --radius-game: 18px;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+            margin: 0;
+            padding: 16px 12px 40px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at 50% 15%, #dbeafe 0%, #bfdbfe 40%, #93c5fd 100%);
+            color: var(--text-title);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* 漂浮雲朵背景裝飾 */
+        .cloud-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.45);
+            border-radius: 50px;
+            animation: floatCloud 45s linear infinite;
+        }
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: inherit;
+            border-radius: 50%;
+        }
+        .c1 { width: 120px; height: 40px; top: 8%; left: -140px; animation-duration: 38s; }
+        .c1::before { width: 50px; height: 50px; top: -20px; left: 20px; }
+        .c1::after { width: 40px; height: 40px; top: -14px; right: 20px; }
+        .c2 { width: 160px; height: 48px; top: 18%; left: -200px; animation-duration: 52s; animation-delay: 15s; }
+        .c2::before { width: 64px; height: 64px; top: -28px; left: 30px; }
+        .c2::after { width: 52px; height: 52px; top: -18px; right: 30px; }
+
+        @keyframes floatCloud {
+            from { transform: translateX(0); }
+            to { transform: translateX(calc(100vw + 240px)); }
+        }
+
+        /* 主遊戲視窗容器 */
+        .game-cabinet {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 960px;
+            background: var(--panel-bg);
+            border: 4px solid #ffffff;
+            border-radius: 28px;
+            box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            padding: 20px 24px 28px;
+            backdrop-filter: blur(12px);
+            text-align: center;
+        }
+
+        /* --- 遊戲頂部抬頭列 (HUD Bar) --- */
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .game-title-group {
+            text-align: left;
+        }
+
+        .game-title {
+            font-size: 1.85rem;
+            font-weight: 800;
+            margin: 0;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+        }
+
+        .game-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            background: linear-gradient(135deg, #10b981, #059669);
+            padding: 3px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+            vertical-align: middle;
+        }
+
+        .game-desc {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin: 2px 0 0 0;
+            font-weight: 500;
+        }
+
+        /* 計分板與星級評等儀表板 */
+        .dashboard-capsule {
+            display: inline-flex;
+            align-items: center;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 50px;
+            padding: 6px 18px;
+            gap: 16px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
+        }
+
+        .dash-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #475569;
+        }
+
+        .dash-num {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0284c7;
+            min-width: 42px;
+            text-align: left;
+            font-feature-settings: "tnum";
+        }
+
+        .stars-container {
+            display: inline-flex;
+            gap: 3px;
+            font-size: 1.25rem;
+        }
+        .star-icon {
+            filter: grayscale(100%) opacity(0.35);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s;
+        }
+        .star-icon.active {
+            filter: grayscale(0%) opacity(1);
+            transform: scale(1.15);
+        }
+
+        /* ========================================================
+           🪜 階梯式鷹架關卡切換列 (Scaffolding Level Selector)
+           ======================================================== */
+        .level-selector-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .level-tab {
+            min-height: var(--touch-min);
+            padding: 6px 16px;
+            border-radius: 14px;
+            border: 2px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+            font-weight: 800;
+            font-size: 0.92rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 3px 0 #94a3b8, 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .level-tab:hover {
+            transform: translateY(-2px);
+            border-color: #38bdf8;
+            color: #0284c7;
+            box-shadow: 0 5px 0 #94a3b8;
+        }
+
+        .level-tab.active {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            border-color: #0284c7;
+            color: #ffffff;
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #075985;
+        }
+
+        .level-tab .tab-badge {
+            font-size: 0.75rem;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: #f1f5f9;
+            color: #475569;
+        }
+        .level-tab.active .tab-badge {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+
+        /* --- 遊戲規則便利貼卡片 --- */
+        .rules-ribbon {
+            background: #fffbeb;
+            border: 2px dashed #fde68a;
+            border-radius: 14px;
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            font-size: 0.875rem;
+            color: #92400e;
+            font-weight: 600;
+        }
+        .rule-tag {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* --- 遊戲池塘舞台主畫布 --- */
+        .pond-stage {
+            position: relative;
+            background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 30%, #0284c7 80%, #0369a1 100%);
+            border: 5px solid #075985;
+            border-radius: 24px;
+            box-shadow: inset 0 6px 14px rgba(0,0,0,0.25), 0 8px 16px rgba(3, 105, 161, 0.25);
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        #game-svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* 荷葉編號文字 */
+        .pad-number {
+            font-family: ui-monospace, SFMono-Regular, monospace;
+            font-size: 13px;
+            font-weight: 800;
+            fill: #14532d;
+            opacity: 0.85;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        /* --- 青蛙動畫隔離分層 --- */
+        .frog-group {
+            cursor: pointer;
+        }
+        
+        .frog-anim {
+            transform-box: fill-box;
+            transform-origin: center bottom;
+            transition: filter 0.2s ease;
+        }
+
+        .frog-group:hover .frog-anim {
+            filter: brightness(1.12) drop-shadow(0 6px 12px rgba(0,0,0,0.35));
+        }
+
+        .frog-group.can-move .frog-anim {
+            animation: frogBreathe 2.2s ease-in-out infinite;
+        }
+
+        @keyframes frogBreathe {
+            0%, 100% { transform: scale(1, 1); }
+            50% { transform: scale(1.06, 1.06) translateY(-2px); }
+        }
+
+        .frog-group.deadlock .frog-eyes {
+            display: none;
+        }
+        .frog-group.deadlock .dizzy-eyes {
+            display: block !important;
+        }
+
+        /* --- 3D 質感遊戲按鈕列 (Juicy Buttons) --- */
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .game-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: var(--touch-min);
+            padding: 0 18px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #ffffff;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            position: relative;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+        }
+
+        /* 3D 按壓立體感實作 */
+        .btn-undo {
+            background: var(--btn-blue);
+            box-shadow: 0 5px 0 var(--btn-blue-edge), 0 8px 12px rgba(29, 78, 216, 0.3);
+        }
+        .btn-undo:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 7px 0 var(--btn-blue-edge); }
+        .btn-undo:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--btn-blue-edge); }
+
+        .btn-reset {
+            background: var(--btn-green);
+            box-shadow: 0 5px 0 var(--btn-green-edge), 0 8px 12px rgba(4, 120, 87, 0.3);
+        }
+        .btn-reset:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 7px 0 var(--btn-green-edge); }
+        .btn-reset:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--btn-green-edge); }
+
+        .btn-sound {
+            background: #64748b;
+            box-shadow: 0 5px 0 #334155, 0 8px 12px rgba(51, 65, 85, 0.25);
+        }
+        .btn-sound:hover { background: #475569; transform: translateY(-2px); box-shadow: 0 7px 0 #334155); }
+        .btn-sound:active { transform: translateY(4px); box-shadow: 0 1px 0 #334155); }
+
+        .btn-solution {
+            background: var(--btn-purple);
+            box-shadow: 0 5px 0 var(--btn-purple-edge), 0 8px 12px rgba(109, 40, 217, 0.3);
+        }
+        .btn-solution:hover { background: #7c3aed; transform: translateY(-2px); box-shadow: 0 7px 0 var(--btn-purple-edge); }
+        .btn-solution:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--btn-purple-edge); }
+
+        .btn-screenshot {
+            background: var(--btn-amber);
+            box-shadow: 0 5px 0 var(--btn-amber-edge), 0 8px 12px rgba(180, 83, 9, 0.3);
+        }
+        .btn-screenshot:hover { background: #d97706; transform: translateY(-2px); box-shadow: 0 7px 0 var(--btn-amber-edge); }
+        .btn-screenshot:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--btn-amber-edge); }
+
+        .game-btn:disabled {
+            background: #94a3b8 !important;
+            box-shadow: 0 4px 0 #64748b !important;
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* 遊戲訊息橫幅 */
+        #game-banner {
+            margin-top: 14px;
+            min-height: 40px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            padding: 6px 16px;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #game-banner.show { opacity: 1; transform: scale(1); }
+        #game-banner.deadlock {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 2px solid #f87171;
+            animation: shake 0.4s ease;
+        }
+        #game-banner.win {
+            background: #dcfce7;
+            color: #15803d;
+            border: 2px solid #4ade80;
+        }
+
+        /* ========================================================
+           📖 全新超好懂攻略手冊 (Visual Solution Guidebook)
+           ======================================================== */
+        #solution-box {
+            display: none;
+            margin-top: 24px;
+            background: #ffffff;
+            border: 3px solid #e9d5ff;
+            border-radius: 20px;
+            padding: 22px;
+            text-align: left;
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.12);
+            animation: popIn 0.3s ease;
+        }
+        #solution-box.visible { display: block; }
+        
+        .sol-header {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #6b21a8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #f3e8ff;
+            padding-bottom: 12px;
+        }
+
+        /* 兩大白話口訣卡片 */
+        .mantra-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .mantra-card {
+            background: #faf5ff;
+            border: 2px solid #e9d5ff;
+            border-radius: 14px;
+            padding: 14px 16px;
+        }
+        .mantra-card h4 {
+            margin: 0 0 6px 0;
+            font-size: 1.05rem;
+            color: #7e22ce;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mantra-card p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+
+        /* 🤖 自動示範播放器控制台 */
+        .demo-bar {
+            background: #f0fdf4;
+            border: 2px solid #86efac;
+            border-radius: 16px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .demo-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            color: #166534;
+            font-size: 0.95rem;
+        }
+        .demo-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .demo-btn {
+            min-height: 38px;
+            padding: 0 14px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            color: #fff;
+            transition: transform 0.1s ease;
+        }
+        .demo-btn:active { transform: scale(0.96); }
+        .demo-btn-play { background: #16a34a; }
+        .demo-btn-play:hover { background: #15803d; }
+        .demo-btn-pause { background: #f59e0b; }
+        .demo-btn-pause:hover { background: #d97706; }
+        .demo-btn-stop { background: #64748b; }
+        .demo-btn-stop:hover { background: #475569; }
+
+        /* 具體步驟對照清單 */
+        .steps-wrapper {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .step-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 140px;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s ease;
+        }
+        .step-row:last-child { border-bottom: none; }
+        .step-row.active {
+            background: #fef08a !important;
+            font-weight: 800;
+            color: #854d0e;
+        }
+        .step-num {
+            font-weight: 800;
+            color: #7c3aed;
+        }
+        .step-action {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .step-type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+        }
+        .badge-jump { background: #dbeafe; color: #1d4ed8; }
+        .badge-slide { background: #fef3c7; color: #b45309; }
+
+        /* 🏆 通關勝利彈窗 (Win Overlay) */
+        #win-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        #win-overlay.show { display: flex; animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        .win-card {
+            background: #ffffff;
+            border-radius: 28px;
+            border: 6px solid #facc15;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            padding: 28px 24px;
+            max-width: 440px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+        }
+
+        .win-stars {
+            font-size: 2.8rem;
+            margin: 8px 0;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .win-stats {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 14px;
+            margin: 14px 0 20px;
+            font-weight: 700;
+            color: #334155;
+            line-height: 1.8;
+            font-size: 0.95rem;
+        }
+
+        /* 密碼彈窗 (Modal) */
+        #password-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1500;
+            justify-content: center;
+            align-items: center;
+        }
+        #password-modal.show { display: flex; animation: popIn 0.2s ease; }
+
+        .pwd-box {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 26px;
+            width: 90%;
+            max-width: 320px;
+            border: 3px solid #e2e8f0;
+            text-align: center;
+        }
+        .pwd-box input {
+            width: 100%;
+            height: 48px;
+            font-size: 1.4rem;
+            text-align: center;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            margin: 14px 0;
+            letter-spacing: 0.2em;
+            outline: none;
+        }
+        .pwd-box input:focus { border-color: var(--btn-purple); }
+
+        /* 彩帶慶祝 Canvas */
+        #confetti-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 2100;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.85); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 漂浮背景雲 -->
+    <div class="cloud-bg">
+        <div class="cloud c1"></div>
+        <div class="cloud c2"></div>
+    </div>
+
+    <!-- 慶祝彩帶畫布 -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- 遊戲主機台容器 -->
+    <div class="game-cabinet">
+        
+        <!-- HUD 儀表列 -->
+        <div class="hud-header">
+            <div class="game-title-group">
+                <h1 class="game-title">
+                    🐸 青蛙過河大冒險
+                    <span class="game-badge">經典演算法</span>
+                </h1>
+                <p id="level-subtitle" class="game-desc">觀察規律 • 找出階梯對調的最短路徑</p>
+            </div>
+
+            <!-- 計分與星級膠囊 -->
+            <div class="dashboard-capsule">
+                <div class="dash-item">
+                    ⏱️ <span id="timer-val" class="dash-num">0.0s</span>
+                </div>
+                <div class="dash-item">
+                    🐾 步數: <span id="moves-val" class="dash-num">0</span>
+                </div>
+                <div class="stars-container" id="stars-tooltip" title="三星標準">
+                    <span id="star-1" class="star-icon active">⭐</span>
+                    <span id="star-2" class="star-icon active">⭐</span>
+                    <span id="star-3" class="star-icon active">⭐</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🪜 階梯式鷹架關卡切換列 -->
+        <div class="level-selector-row">
+            <button class="level-tab active" data-level="1">
+                <span class="tab-badge">Level 1</span>
+                <span>🌱 入門 1v1 (3步)</span>
+            </button>
+            <button class="level-tab" data-level="2">
+                <span class="tab-badge">Level 2</span>
+                <span>🌿 基礎 2v2 (8步)</span>
+            </button>
+            <button class="level-tab" data-level="3">
+                <span class="tab-badge">Level 3</span>
+                <span>👑 核心 3v3 (15步)</span>
+            </button>
+            <button class="level-tab" data-level="4">
+                <span class="tab-badge">Level 4</span>
+                <span>🔥 挑戰 4v4 (24步)</span>
+            </button>
+        </div>
+
+        <!-- 遊戲規則提示便籤 -->
+        <div class="rules-ribbon" id="rules-ribbon">
+            <!-- 由 JS 依關卡動態注入 -->
+        </div>
+
+        <!-- 遊戲池塘舞台 (SVG 向量渲染) -->
+        <div class="pond-stage">
+            <svg id="game-svg" viewBox="0 0 880 260" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- 荷葉漸層立體光影 -->
+                    <linearGradient id="pad-top" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#86efac" />
+                        <stop offset="100%" stop-color="#22c55e" />
+                    </linearGradient>
+                    <linearGradient id="pad-depth" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#15803d" />
+                        <stop offset="100%" stop-color="#0f5132" />
+                    </linearGradient>
+
+                    <!-- 綠青蛙 (Emerald Green) 質感漸層 -->
+                    <linearGradient id="frog-green" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#4ade80" />
+                        <stop offset="50%" stop-color="#22c55e" />
+                        <stop offset="100%" stop-color="#15803d" />
+                    </linearGradient>
+                    
+                    <!-- 橙青蛙 (Sunset Orange) 質感漸層 -->
+                    <linearGradient id="frog-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#fde047" />
+                        <stop offset="50%" stop-color="#fb923c" />
+                        <stop offset="100%" stop-color="#c2410c" />
+                    </linearGradient>
+
+                    <!-- 漣漪濾鏡 -->
+                    <filter id="glow-light" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+                    </filter>
+                </defs>
+
+                <!-- 水波波光背景裝飾 -->
+                <path d="M 40 80 Q 200 65 360 80 T 680 80" stroke="#bae6fd" stroke-width="3" fill="none" opacity="0.3" stroke-linecap="round"/>
+                <path d="M 120 120 Q 300 105 480 120 T 800 120" stroke="#bae6fd" stroke-width="2.5" fill="none" opacity="0.25" stroke-linecap="round"/>
+                
+                <!-- 池邊裝飾睡蓮花 -->
+                <g transform="translate(45, 205)">
+                    <ellipse cx="0" cy="0" rx="20" ry="8" fill="#ec4899" opacity="0.8"/>
+                    <circle cx="0" cy="-3" r="5" fill="#fde047"/>
+                </g>
+                <g transform="translate(835, 200)">
+                    <ellipse cx="0" cy="0" rx="18" ry="7" fill="#f472b6" opacity="0.8"/>
+                    <circle cx="0" cy="-2" r="4" fill="#fef08a"/>
+                </g>
+
+                <!-- 荷葉層 -->
+                <g id="lilypads-layer"></g>
+
+                <!-- 飛濺水花特效層 -->
+                <g id="splash-layer"></g>
+
+                <!-- 青蛙角色層 -->
+                <g id="frogs-layer"></g>
+            </svg>
+        </div>
+
+        <!-- 遊戲操作按鍵列 (3D Juicy Buttons) -->
+        <div class="game-controls">
+            <button id="undo-btn" class="game-btn btn-undo" title="回退到上一步驟">
+                ↩️ 上一步 (Undo)
+            </button>
+            <button id="reset-btn" class="game-btn btn-reset" title="重新開始此局">
+                ↻ 重新開始
+            </button>
+            <button id="sound-btn" class="game-btn btn-sound" title="切換開關音效">
+                🔊 音效: 開
+            </button>
+            <button id="solution-btn" class="game-btn btn-solution" title="解密通關演算法">
+                📖 白話攻略與自動示範
+            </button>
+            <button id="screenshot-btn" class="game-btn btn-screenshot" title="儲存通關畫面">
+                📷 成果截圖
+            </button>
+        </div>
+
+        <!-- 狀態提醒通知橫幅 -->
+        <div id="game-banner"></div>
+
+        <!-- ========================================================
+             📖 全新超好懂攻略手冊 (Visual Solution Guidebook)
+             ======================================================== -->
+        <div id="solution-box">
+            <div class="sol-header">
+                <div>📖 演算法通關秘笈（看口訣＋看示範）</div>
+                <div id="sol-pad-count-info" style="font-size: 0.85rem; font-weight: normal; color: #7e22ce;">荷葉編號</div>
+            </div>
+            
+            <!-- 兩大白話口訣 -->
+            <div class="mantra-grid">
+                <div class="mantra-card">
+                    <h4>🐸 心法一：能跳就跳，絕不猶豫！</h4>
+                    <p>只要前方隔著「不同顏色」的青蛙可以<strong>跨跳</strong>，就一定要跳！千萬不要自己默默往前滑步，否則很容易把別人的路卡死。</p>
+                </div>
+                <div class="mantra-card">
+                    <h4>🐸 心法二：同色青蛙絕不手牽手！</h4>
+                    <p>在過河過程中，<strong>絕對不能讓兩隻同色青蛙排在相鄰空格</strong>（除非已經平安抵達對岸終點）。一旦同色相碰，下一秒必定卡死！</p>
+                </div>
+            </div>
+
+            <!-- 🤖 自動示範播放器 -->
+            <div class="demo-bar">
+                <div class="demo-info">
+                    <span>🤖 演算法自動演示：</span>
+                    <span id="demo-status-text">點擊「▶ 播放示範」直接看電腦跳給你看！</span>
+                </div>
+                <div class="demo-actions">
+                    <button id="demo-play-btn" class="demo-btn demo-btn-play">▶ 播放示範</button>
+                    <button id="demo-pause-btn" class="demo-btn demo-btn-pause" style="display: none;">⏸ 暫停</button>
+                    <button id="demo-stop-btn" class="demo-btn demo-btn-stop" style="display: none;">⏹ 停止並手動接管</button>
+                </div>
+            </div>
+
+            <!-- 具體步驟對照清單 -->
+            <div id="steps-table-title" style="font-weight: 700; margin-bottom: 8px; color: #475569; font-size: 0.9rem;">
+                📋 完整棋譜對照表：
+            </div>
+            <div class="steps-wrapper" id="steps-list">
+                <!-- 由 JS 動態注入詳細步驟 -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 🏆 通關勝利結算對話框 (Win Modal) -->
+    <div id="win-overlay">
+        <div class="win-card">
+            <div style="font-size: 2.2rem;">🎉</div>
+            <h2 id="win-heading" style="margin: 4px 0; color: #0f172a;">恭喜過河大成功！</h2>
+            <div id="win-stars" class="win-stars">⭐⭐⭐</div>
+            <div class="win-stats">
+                當前關卡：<span id="win-level-name" style="color: #475569;">第 1 關</span><br>
+                總計步數：<span id="win-moves" style="color: #0284c7; font-size: 1.3rem;">3</span> 步<br>
+                消耗時間：<span id="win-time" style="color: #059669; font-size: 1.3rem;">0.0</span> 秒<br>
+                評等稱號：<span id="win-title" style="color: #7c3aed; font-weight: 800;">完美演算法大師</span>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button id="modal-next-btn" class="game-btn btn-undo" style="flex: 1 1 120px;">下一關 ➔</button>
+                <button id="modal-replay-btn" class="game-btn btn-reset" style="flex: 1 1 100px;">再玩一局 ↺</button>
+                <button id="modal-shot-btn" class="game-btn btn-amber" style="flex: 1 1 100px;">成果截圖 📷</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 密碼輸入對話框 -->
+    <div id="password-modal">
+        <div class="pwd-box">
+            <h3 style="margin-top: 0; color: #1e293b;">🔒 解鎖演算法秘笈</h3>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 8px;">動腦是最好的學習！請向老師索取通關密碼</p>
+            <input type="password" id="password-input" maxlength="4" placeholder="請輸入 4 位密碼" autocomplete="off">
+            <div style="display: flex; gap: 8px;">
+                <button id="cancel-pwd-btn" class="game-btn btn-sound" style="flex: 1;">取消</button>
+                <button id="confirm-pwd-btn" class="game-btn btn-solution" style="flex: 1;">確認</button>
+            </div>
+            <div id="pwd-error" style="color: #ef4444; font-size: 0.85rem; font-weight: 700; margin-top: 8px; min-height: 1.2em;"></div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 🔊 遊戲原生音效引擎 (Web Audio API Synthesizer)
+         */
+        class ArcadeAudio {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(580, now + 0.16);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.16);
+            }
+
+            playLand() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(60, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+
+            playUndo() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(220, now + 0.14);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.14);
+            }
+
+            playDeadlock() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.linearRampToValueAtTime(170, now + 0.25);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+
+            playVictory() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                const arpeggio = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
+                arpeggio.forEach((f, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const t = this.ctx.currentTime + (i * 0.08);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, t);
+                    gain.gain.setValueAtTime(0.25, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.4);
+                });
+            }
+        }
+
+        const audio = new ArcadeAudio();
+
+        // ========================================================
+        // 🧩 關卡架構定義 (Level Definitions)
+        // ========================================================
+        const LEVEL_CONFIGS = {
+            1: {
+                level: 1,
+                name: '第 1 關：初試啼聲',
+                badgeText: '🌱 入門 1v1',
+                subtitle: '理解規則 • 1 隻綠蛙與 1 隻橙蛙對調 (最少 3 步)',
+                n: 1,
+                totalSlots: 3,
+                perfectMoves: 3,
+                twoStarMoves: 4,
+                slotWidth: 190
+            },
+            2: {
+                level: 2,
+                name: '第 2 關：漸入佳境',
+                badgeText: '🌿 基礎 2v2',
+                subtitle: '發現模式 • 左右各 2 隻青蛙對調 (最少 8 步)',
+                n: 2,
+                totalSlots: 5,
+                perfectMoves: 8,
+                twoStarMoves: 10,
+                slotWidth: 140
+            },
+            3: {
+                level: 3,
+                name: '第 3 關：神乎其技',
+                badgeText: '👑 核心 3v3',
+                subtitle: '規律遷移 • 左右各 3 隻青蛙對調 (最少 15 步)',
+                n: 3,
+                totalSlots: 7,
+                perfectMoves: 15,
+                twoStarMoves: 18,
+                slotWidth: 110
+            },
+            4: {
+                level: 4,
+                name: '第 4 關：登峰造極',
+                badgeText: '🔥 挑戰 4v4',
+                subtitle: '演算法極限挑戰 • 左右各 4 隻青蛙對調 (最少 24 步)',
+                n: 4,
+                totalSlots: 9,
+                perfectMoves: 24,
+                twoStarMoves: 28,
+                slotWidth: 90
+            }
+        };
+
+        let currentLevel = 1;
+        let TOTAL_SLOTS = 3;
+        let SLOT_WIDTH = 190;
+        let START_X = 110;
+        const LILY_Y = 195;
+        const FROG_Y = 175;
+
+        let frogsConfig = [];
+        let initialLayout = [];
+        let currentSolution = [];
+
+        let boardState = [];
+        let historyStack = [];
+        let startTime = 0;
+        let timerInterval = null;
+        let moves = 0;
+        let gameStarted = false;
+        let isAnimating = false;
+        let isGameOver = false;
+
+        // 🤖 自動示範控制器
+        let demoTimer = null;
+        let isDemoPlaying = false;
+        let demoStepIndex = 0;
+
+        // DOM 引用
+        const lilypadsLayer = document.getElementById('lilypads-layer');
+        const frogsLayer = document.getElementById('frogs-layer');
+        const splashLayer = document.getElementById('splash-layer');
+        const timerVal = document.getElementById('timer-val');
+        const movesVal = document.getElementById('moves-val');
+        const gameBanner = document.getElementById('game-banner');
+        const levelSubtitle = document.getElementById('level-subtitle');
+        const rulesRibbon = document.getElementById('rules-ribbon');
+        const starsTooltip = document.getElementById('stars-tooltip');
+        
+        const star1 = document.getElementById('star-1');
+        const star2 = document.getElementById('star-2');
+        const star3 = document.getElementById('star-3');
+
+        const undoBtn = document.getElementById('undo-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const soundBtn = document.getElementById('sound-btn');
+        const solutionBtn = document.getElementById('solution-btn');
+        const screenshotBtn = document.getElementById('screenshot-btn');
+        
+        // 勝利彈窗
+        const winOverlay = document.getElementById('win-overlay');
+        const winHeading = document.getElementById('win-heading');
+        const winLevelName = document.getElementById('win-level-name');
+        const winStars = document.getElementById('win-stars');
+        const winMoves = document.getElementById('win-moves');
+        const winTime = document.getElementById('win-time');
+        const winTitle = document.getElementById('win-title');
+        const modalNextBtn = document.getElementById('modal-next-btn');
+        const modalReplayBtn = document.getElementById('modal-replay-btn');
+        const modalShotBtn = document.getElementById('modal-shot-btn');
+
+        // 攻略與示範元素
+        const solutionBox = document.getElementById('solution-box');
+        const stepsListEl = document.getElementById('steps-list');
+        const demoPlayBtn = document.getElementById('demo-play-btn');
+        const demoPauseBtn = document.getElementById('demo-pause-btn');
+        const demoStopBtn = document.getElementById('demo-stop-btn');
+        const demoStatusText = document.getElementById('demo-status-text');
+        const solPadCountInfo = document.getElementById('sol-pad-count-info');
+        const stepsTableTitle = document.getElementById('steps-table-title');
+
+        const pwdModal = document.getElementById('password-modal');
+        const pwdInput = document.getElementById('password-input');
+        const pwdError = document.getElementById('pwd-error');
+        const confirmPwdBtn = document.getElementById('confirm-pwd-btn');
+        const cancelPwdBtn = document.getElementById('cancel-pwd-btn');
+
+        /**
+         * 🧮 演算法求解器 (BFS Optimal Solver)
+         * 自動推導任何關卡之最優步數與棋譜，並生成白話教學解說
+         */
+        function solvePuzzle(n) {
+            const total = 2 * n + 1;
+            const startBoard = [];
+            for (let i = 0; i < n; i++) startBoard.push(i);
+            startBoard.push(null);
+            for (let i = 0; i < n; i++) startBoard.push(n + i);
+
+            const isTarget = (b) => {
+                for (let i = 0; i < n; i++) {
+                    if (b[i] === null || b[i] < n) return false;
+                }
+                if (b[n] !== null) return false;
+                for (let i = n + 1; i < total; i++) {
+                    if (b[i] === null || b[i] >= n) return false;
+                }
+                return true;
+            };
+
+            const queue = [[startBoard, []]];
+            const visited = new Set([startBoard.join(',')]);
+
+            while (queue.length > 0) {
+                const [board, path] = queue.shift();
+                if (isTarget(board)) return path;
+
+                const empty = board.indexOf(null);
+                const candidates = [
+                    { from: empty - 1, valid: (id) => id !== null && id < n },
+                    { from: empty - 2, valid: (id) => id !== null && id < n },
+                    { from: empty + 1, valid: (id) => id !== null && id >= n },
+                    { from: empty + 2, valid: (id) => id !== null && id >= n }
+                ];
+
+                for (const cand of candidates) {
+                    if (cand.from >= 0 && cand.from < total && cand.valid(board[cand.from])) {
+                        const next = [...board];
+                        const frogId = board[cand.from];
+                        next[empty] = frogId;
+                        next[cand.from] = null;
+                        const key = next.join(',');
+                        if (!visited.has(key)) {
+                            visited.add(key);
+                            const isJump = Math.abs(empty - cand.from) === 2;
+                            const frogName = frogId < n ? `綠${frogId + 1}號` : `橙${frogId - n + 1}號`;
+                            const desc = `${cand.from + 1} 號【${frogName}】${isJump ? '🦘 跨跳至' : '➡️ 滑步至'} ${empty + 1} 號`;
+                            queue.push([next, [...path, {
+                                frogId,
+                                from: cand.from + 1,
+                                to: empty + 1,
+                                type: isJump ? '跨跳' : '滑步',
+                                desc
+                            }]]);
+                        }
+                    }
+                }
+            }
+            return [];
+        }
+
+        /**
+         * 🌿 載入指定關卡 (Switch Level)
+         */
+        function loadLevel(lvlNum) {
+            currentLevel = lvlNum;
+            const cfg = LEVEL_CONFIGS[lvlNum];
+            TOTAL_SLOTS = cfg.totalSlots;
+            SLOT_WIDTH = cfg.slotWidth;
+            START_X = (880 - (TOTAL_SLOTS - 1) * SLOT_WIDTH) / 2;
+
+            // 1. 生成青蛙配置
+            frogsConfig = [];
+            for (let i = 0; i < cfg.n; i++) {
+                frogsConfig.push({ id: i, type: 'L', grad: 'url(#frog-green)', eyeDir: 1, name: `綠${i + 1}號` });
+            }
+            for (let i = 0; i < cfg.n; i++) {
+                frogsConfig.push({ id: cfg.n + i, type: 'R', grad: 'url(#frog-orange)', eyeDir: -1, name: `橙${i + 1}號` });
+            }
+
+            // 2. 初始盤面
+            initialLayout = [];
+            for (let i = 0; i < cfg.n; i++) initialLayout.push(i);
+            initialLayout.push(null);
+            for (let i = 0; i < cfg.n; i++) initialLayout.push(cfg.n + i);
+
+            // 3. 計算最佳棋譜
+            currentSolution = solvePuzzle(cfg.n);
+
+            // 4. 更新頂部介面文字
+            levelSubtitle.textContent = cfg.subtitle;
+            starsTooltip.title = `評等標準：${cfg.perfectMoves}步★★★ / ≤${cfg.twoStarMoves}步★★ / 超過★`;
+
+            // 5. 更新標籤狀態
+            document.querySelectorAll('.level-tab').forEach(tab => {
+                if (parseInt(tab.dataset.level, 10) === lvlNum) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+
+            // 6. 更新規則便利貼
+            rulesRibbon.innerHTML = `
+                <div class="rule-tag">🟢 <strong>綠青蛙 (${cfg.n}隻)</strong>：向右移動 ▶</div>
+                <div class="rule-tag">🟠 <strong>橙青蛙 (${cfg.n}隻)</strong>：向左移動 ◀</div>
+                <div class="rule-tag">🦘 <strong>行進規則</strong>：滑動相鄰空格，或跨跳過「一隻」青蛙</div>
+                <div class="rule-tag">🎯 <strong>目標</strong>：雙方對調即通關（最少 <strong>${cfg.perfectMoves}</strong> 步）</div>
+            `;
+
+            // 7. 更新攻略說明
+            solPadCountInfo.textContent = `荷葉由左至右編號為 ① ~ ⑨ (本關共 ${TOTAL_SLOTS} 片)`;
+            stepsTableTitle.textContent = `📋 【${cfg.name}】最優 ${cfg.perfectMoves} 步棋譜對照表：`;
+
+            // 8. 重繪畫布
+            renderScene();
+            renderStepsTable();
+            resetState();
+        }
+
+        /**
+         * 🎨 繪製 SVG 池塘與角色 (Dynamic SVG Render)
+         */
+        function renderScene() {
+            // 1. 生成荷葉基座
+            lilypadsLayer.innerHTML = '';
+            const padRx = currentLevel === 4 ? 40 : 46;
+            const padRy = currentLevel === 4 ? 18 : 20;
+
+            for (let i = 0; i < TOTAL_SLOTS; i++) {
+                const cx = START_X + i * SLOT_WIDTH;
+                const g = createSVG('g', { class: 'lily-pad', id: `pad-${i}` });
+
+                // 荷葉水中投影
+                const shadow = createSVG('ellipse', {
+                    cx: cx, cy: LILY_Y + 12, rx: padRx + 2, ry: padRy,
+                    fill: '#024d77', opacity: '0.45'
+                });
+
+                // 荷葉側緣厚度底層
+                const rim = createSVG('ellipse', {
+                    cx: cx, cy: LILY_Y + 5, rx: padRx, ry: padRy + 1,
+                    fill: 'url(#pad-depth)'
+                });
+
+                // 荷葉頂部表面
+                const top = createSVG('ellipse', {
+                    cx: cx, cy: LILY_Y, rx: padRx, ry: padRy,
+                    fill: 'url(#pad-top)', stroke: '#15803d', 'stroke-width': '2.5'
+                });
+
+                // 荷葉缺角
+                const notch = createSVG('path', {
+                    d: `M ${cx} ${LILY_Y} L ${cx + padRx - 2} ${LILY_Y - 5} L ${cx + padRx - 4} ${LILY_Y + 8} Z`,
+                    fill: '#0284c7', opacity: '0.9'
+                });
+
+                // 荷葉編號文字（清晰標示 ① ~ ⑨）
+                const numText = createSVG('text', {
+                    x: cx, y: LILY_Y + 16, class: 'pad-number'
+                });
+                numText.textContent = `${i + 1}`;
+
+                // 露珠裝飾
+                const dew = createSVG('circle', {
+                    cx: cx - 18, cy: LILY_Y - 5, r: 2.6,
+                    fill: '#ffffff', opacity: '0.75'
+                });
+
+                g.appendChild(shadow);
+                g.appendChild(rim);
+                g.appendChild(top);
+                g.appendChild(notch);
+                g.appendChild(numText);
+                g.appendChild(dew);
+                lilypadsLayer.appendChild(g);
+            }
+
+            // 2. 生成卡通立體青蛙
+            frogsLayer.innerHTML = '';
+            const frogScale = currentLevel === 4 ? 0.9 : 1.0;
+
+            frogsConfig.forEach(frog => {
+                const g = createSVG('g', {
+                    class: 'frog-group',
+                    id: `frog-${frog.id}`,
+                    'data-id': frog.id
+                });
+                g.addEventListener('click', () => {
+                    if (isDemoPlaying) stopDemo();
+                    handleFrogJump(frog.id);
+                });
+
+                const animG = createSVG('g', {
+                    class: 'frog-anim',
+                    filter: 'url(#glow-light)'
+                });
+
+                // 比例微調容器
+                const innerG = createSVG('g', {
+                    transform: `scale(${frogScale})`
+                });
+
+                // 後腿與腳蹼
+                const legL = createSVG('ellipse', { cx: -24, cy: 12, rx: 10, ry: 7, fill: frog.type==='L'?'#16a34a':'#ea580c' });
+                const legR = createSVG('ellipse', { cx: 24, cy: 12, rx: 10, ry: 7, fill: frog.type==='L'?'#16a34a':'#ea580c' });
+                const footL = createSVG('ellipse', { cx: -28, cy: 18, rx: 8, ry: 4, fill: frog.type==='L'?'#15803d':'#c2410c' });
+                const footR = createSVG('ellipse', { cx: 28, cy: 18, rx: 8, ry: 4, fill: frog.type==='L'?'#15803d':'#c2410c' });
+
+                // 青蛙圓滾身軀
+                const body = createSVG('ellipse', {
+                    cx: 0, cy: 2, rx: 28, ry: 22,
+                    fill: frog.grad, stroke: frog.type==='L'?'#14532d':'#7c2d12', 'stroke-width': '2.5',
+                    class: 'frog-body'
+                });
+
+                // 奶黃色微胖肚皮
+                const belly = createSVG('ellipse', {
+                    cx: 0, cy: 6, rx: 18, ry: 13,
+                    fill: frog.type==='L'?'#bbf7d0':'#fef08a', opacity: '0.85'
+                });
+
+                // 害羞腮紅
+                const blushL = createSVG('circle', { cx: -15, cy: 3, r: 4.5, fill: '#f43f5e', opacity: '0.45' });
+                const blushR = createSVG('circle', { cx: 15, cy: 3, r: 4.5, fill: '#f43f5e', opacity: '0.45' });
+
+                // 靈動大眼睛
+                const eyeGroup = createSVG('g', { class: 'frog-eyes' });
+                const eyeLX = -13, eyeRX = 13, eyeY = -18;
+                const eyeOffset = frog.eyeDir * 3;
+
+                // 左眼
+                const eyeBaseL = createSVG('circle', { cx: eyeLX, cy: eyeY, r: 9.5, fill: '#ffffff', stroke: '#0f172a', 'stroke-width': '2' });
+                const pupilL = createSVG('circle', { cx: eyeLX + eyeOffset, cy: eyeY, r: 4.5, fill: '#0f172a' });
+                const shineL1 = createSVG('circle', { cx: eyeLX + eyeOffset - 1.5, cy: eyeY - 2.5, r: 2, fill: '#ffffff' });
+                const shineL2 = createSVG('circle', { cx: eyeLX + eyeOffset + 2, cy: eyeY + 1.5, r: 1, fill: '#ffffff' });
+
+                // 右眼
+                const eyeBaseR = createSVG('circle', { cx: eyeRX, cy: eyeY, r: 9.5, fill: '#ffffff', stroke: '#0f172a', 'stroke-width': '2' });
+                const pupilR = createSVG('circle', { cx: eyeRX + eyeOffset, cy: eyeY, r: 4.5, fill: '#0f172a' });
+                const shineR1 = createSVG('circle', { cx: eyeRX + eyeOffset - 1.5, cy: eyeY - 2.5, r: 2, fill: '#ffffff' });
+                const shineR2 = createSVG('circle', { cx: eyeRX + eyeOffset + 2, cy: eyeY + 1.5, r: 1, fill: '#ffffff' });
+
+                eyeGroup.appendChild(eyeBaseL); eyeGroup.appendChild(pupilL); eyeGroup.appendChild(shineL1); eyeGroup.appendChild(shineL2);
+                eyeGroup.appendChild(eyeBaseR); eyeGroup.appendChild(pupilR); eyeGroup.appendChild(shineR1); eyeGroup.appendChild(shineR2);
+
+                // 卡死暈眩眼睛
+                const dizzyGroup = createSVG('g', { class: 'dizzy-eyes', style: 'display: none;' });
+                const dizzyL = createSVG('text', { x: eyeLX - 7, y: eyeY + 5, fill: '#b91c1c', 'font-size': '16px', 'font-weight': 'bold' });
+                dizzyL.textContent = "✖";
+                const dizzyR = createSVG('text', { x: eyeRX - 7, y: eyeY + 5, fill: '#b91c1c', 'font-size': '16px', 'font-weight': 'bold' });
+                dizzyR.textContent = "✖";
+                dizzyGroup.appendChild(dizzyL); dizzyGroup.appendChild(dizzyR);
+
+                // 嘴巴
+                const mouth = createSVG('path', {
+                    d: 'M -7 8 Q 0 13 7 8', fill: 'none', stroke: '#0f172a', 'stroke-width': '2', 'stroke-linecap': 'round'
+                });
+
+                // 前爪
+                const handL = createSVG('ellipse', { cx: -9, cy: 14, rx: 4, ry: 3, fill: frog.type==='L'?'#16a34a':'#ea580c' });
+                const handR = createSVG('ellipse', { cx: 9, cy: 14, rx: 4, ry: 3, fill: frog.type==='L'?'#16a34a':'#ea580c' });
+
+                innerG.appendChild(footL); innerG.appendChild(footR);
+                innerG.appendChild(legL); innerG.appendChild(legR);
+                innerG.appendChild(body);
+                innerG.appendChild(belly);
+                innerG.appendChild(blushL); innerG.appendChild(blushR);
+                innerG.appendChild(eyeGroup);
+                innerG.appendChild(dizzyGroup);
+                innerG.appendChild(mouth);
+                innerG.appendChild(handL); innerG.appendChild(handR);
+
+                animG.appendChild(innerG);
+                g.appendChild(animG);
+                frogsLayer.appendChild(g);
+            });
+        }
+
+        // 渲染對照表
+        function renderStepsTable() {
+            stepsListEl.innerHTML = '';
+            currentSolution.forEach((step, idx) => {
+                const row = document.createElement('div');
+                row.className = 'step-row';
+                row.id = `step-row-${idx}`;
+                
+                const badgeClass = step.type === '跨跳' ? 'badge-jump' : 'badge-slide';
+                row.innerHTML = `
+                    <div class="step-num">第 ${idx + 1} 步</div>
+                    <div class="step-action">${step.desc}</div>
+                    <div style="text-align: right;"><span class="step-type-badge ${badgeClass}">${step.type}</span></div>
+                `;
+                stepsListEl.appendChild(row);
+            });
+        }
+
+        function resetState() {
+            stopDemo();
+            boardState = [...initialLayout];
+            historyStack = [];
+            gameStarted = false;
+            moves = 0;
+            isGameOver = false;
+            stopTimer();
+            
+            timerVal.textContent = '0.0s';
+            movesVal.textContent = '0';
+            updateStarsDisplay(0);
+
+            gameBanner.textContent = '';
+            gameBanner.className = '';
+            isAnimating = false;
+            
+            undoBtn.disabled = true;
+            resetBtn.disabled = false;
+            screenshotBtn.disabled = false;
+
+            document.querySelectorAll('.frog-group').forEach(el => el.classList.remove('deadlock'));
+            document.querySelectorAll('.step-row').forEach(el => el.classList.remove('active'));
+            updateFrogsPosition();
+            refreshHints();
+        }
+
+        function updateFrogsPosition() {
+            for (let i = 0; i < TOTAL_SLOTS; i++) {
+                const fId = boardState[i];
+                if (fId !== null) {
+                    const el = document.getElementById(`frog-${fId}`);
+                    if (el) {
+                        const targetX = START_X + i * SLOT_WIDTH;
+                        el.setAttribute('transform', `translate(${targetX}, ${FROG_Y})`);
+                        const animEl = el.querySelector('.frog-anim');
+                        if (animEl) animEl.removeAttribute('transform');
+                    }
+                }
+            }
+        }
+
+        function refreshHints() {
+            document.querySelectorAll('.frog-group').forEach(el => el.classList.remove('can-move'));
+            if (isGameOver) return;
+
+            for (let i = 0; i < TOTAL_SLOTS; i++) {
+                const fId = boardState[i];
+                if (fId !== null) {
+                    const frog = frogsConfig.find(f => f.id === fId);
+                    if (!frog) continue;
+                    const dir = frog.type === 'L' ? 1 : -1;
+                    const s1 = i + dir;
+                    const s2 = i + (dir * 2);
+                    const canStep = (s1 >= 0 && s1 < TOTAL_SLOTS && boardState[s1] === null);
+                    const canJump = (s2 >= 0 && s2 < TOTAL_SLOTS && boardState[s2] === null);
+                    
+                    if (canStep || canJump) {
+                        const el = document.getElementById(`frog-${fId}`);
+                        if (el) el.classList.add('can-move');
+                    }
+                }
+            }
+        }
+
+        /**
+         * 🐸 核心跳躍處理
+         */
+        function handleFrogJump(frogId, onJumpFinished = null) {
+            if (isAnimating || isGameOver) return;
+
+            const curIdx = boardState.indexOf(frogId);
+            if (curIdx === -1) return;
+
+            const frog = frogsConfig.find(f => f.id === frogId);
+            if (!frog) return;
+            const dir = frog.type === 'L' ? 1 : -1;
+
+            let targetIdx = -1;
+            const step1 = curIdx + dir;
+            if (step1 >= 0 && step1 < TOTAL_SLOTS && boardState[step1] === null) {
+                targetIdx = step1;
+            } else {
+                const step2 = curIdx + (dir * 2);
+                if (step2 >= 0 && step2 < TOTAL_SLOTS && boardState[step2] === null) {
+                    targetIdx = step2;
+                }
+            }
+
+            if (targetIdx !== -1) {
+                if (!gameStarted && !isDemoPlaying) {
+                    gameStarted = true;
+                    startTimer();
+                }
+
+                historyStack.push({
+                    board: [...boardState],
+                    moves: moves
+                });
+                undoBtn.disabled = false;
+
+                isAnimating = true;
+                audio.playJump();
+
+                const el = document.getElementById(`frog-${frogId}`);
+                const startX = START_X + curIdx * SLOT_WIDTH;
+                const endX = START_X + targetIdx * SLOT_WIDTH;
+                const isCrossJump = Math.abs(targetIdx - curIdx) === 2;
+
+                createWaterSplash(startX, LILY_Y);
+
+                animateFrogArc(el, startX, endX, isCrossJump, () => {
+                    boardState[targetIdx] = frogId;
+                    boardState[curIdx] = null;
+                    
+                    moves++;
+                    movesVal.textContent = moves;
+                    updateStarsDisplay(moves);
+                    
+                    audio.playLand();
+                    createWaterSplash(endX, LILY_Y);
+                    
+                    isAnimating = false;
+                    
+                    if (checkWin()) {
+                        handleVictory();
+                    } else {
+                        checkDeadlock();
+                        refreshHints();
+                    }
+
+                    if (typeof onJumpFinished === 'function') {
+                        onJumpFinished();
+                    }
+                });
+            }
+        }
+
+        // ↩️ 歷史回溯 (Undo)
+        function handleUndo() {
+            if (isAnimating || historyStack.length === 0) return;
+            if (isDemoPlaying) stopDemo();
+            
+            const prev = historyStack.pop();
+            boardState = [...prev.board];
+            moves = prev.moves;
+            movesVal.textContent = moves;
+            updateStarsDisplay(moves);
+
+            isGameOver = false;
+            gameBanner.textContent = '';
+            gameBanner.className = '';
+            document.querySelectorAll('.frog-group').forEach(el => el.classList.remove('deadlock'));
+
+            audio.playUndo();
+            updateFrogsPosition();
+            undoBtn.disabled = historyStack.length === 0;
+            refreshHints();
+
+            // 更新清單高亮
+            highlightStepRow(moves - 1);
+        }
+
+        // 拋物線物理動畫
+        function animateFrogArc(frogGroup, startX, endX, isJump, onComplete) {
+            const startTime = performance.now();
+            const duration = isJump ? 360 : 280; 
+            const jumpHeight = isJump ? 90 : 50; 
+            const baseY = FROG_Y;
+            const animEl = frogGroup.querySelector('.frog-anim');
+
+            function frame(time) {
+                const elapsed = time - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const currentX = startX + (endX - startX) * progress;
+                const arcY = Math.sin(progress * Math.PI) * jumpHeight;
+                const currentY = baseY - arcY;
+
+                let scaleX = 1, scaleY = 1;
+                if (progress < 0.25) {
+                    scaleX = 0.88; scaleY = 1.15;
+                } else if (progress > 0.8) {
+                    scaleX = 1.18; scaleY = 0.85;
+                }
+
+                frogGroup.setAttribute('transform', `translate(${currentX}, ${currentY})`);
+                if (animEl) animEl.setAttribute('transform', `scale(${scaleX}, ${scaleY})`);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(frame);
+                } else {
+                    frogGroup.setAttribute('transform', `translate(${endX}, ${baseY})`);
+                    if (animEl) animEl.removeAttribute('transform');
+                    if (onComplete) onComplete();
+                }
+            }
+            requestAnimationFrame(frame);
+        }
+
+        function createWaterSplash(x, y) {
+            const ripple = createSVG('ellipse', {
+                cx: x, cy: y + 8, rx: 16, ry: 7,
+                fill: 'none', stroke: '#ffffff', 'stroke-width': '2.5', opacity: '0.9'
+            });
+            splashLayer.appendChild(ripple);
+
+            let rad = 16;
+            let op = 0.9;
+            const timer = setInterval(() => {
+                rad += 3;
+                op -= 0.1;
+                ripple.setAttribute('rx', rad);
+                ripple.setAttribute('ry', rad * 0.45);
+                ripple.setAttribute('opacity', op);
+                if (op <= 0) {
+                    clearInterval(timer);
+                    if (ripple.parentNode) ripple.parentNode.removeChild(ripple);
+                }
+            }, 30);
+        }
+
+        function checkDeadlock() {
+            let canMove = false;
+            for (let i = 0; i < TOTAL_SLOTS; i++) {
+                const fId = boardState[i];
+                if (fId !== null) {
+                    const frog = frogsConfig.find(f => f.id === fId);
+                    if (!frog) continue;
+                    const dir = frog.type === 'L' ? 1 : -1;
+                    const s1 = i + dir;
+                    const s2 = i + (dir * 2);
+                    if (s1 >= 0 && s1 < TOTAL_SLOTS && boardState[s1] === null) { canMove = true; break; }
+                    if (s2 >= 0 && s2 < TOTAL_SLOTS && boardState[s2] === null) { canMove = true; break; }
+                }
+            }
+
+            if (!canMove) {
+                isGameOver = true;
+                stopTimer();
+                stopDemo();
+                audio.playDeadlock();
+                gameBanner.textContent = '⚠️ 兩隊相撞卡死了！點擊「上一步」回退即可解套！';
+                gameBanner.className = 'show deadlock';
+                document.querySelectorAll('.frog-group').forEach(el => el.classList.add('deadlock'));
+            }
+        }
+
+        function checkWin() {
+            const cfg = LEVEL_CONFIGS[currentLevel];
+            const n = cfg.n;
+            // 勝利條件：左側 n 格全為橙蛙 (type 'R')，右側 n 格全為綠蛙 (type 'L')
+            for (let i = 0; i < n; i++) {
+                const id = boardState[i];
+                if (id === null) return false;
+                const frog = frogsConfig.find(f => f.id === id);
+                if (!frog || frog.type !== 'R') return false;
+            }
+            if (boardState[n] !== null) return false;
+            for (let i = n + 1; i < TOTAL_SLOTS; i++) {
+                const id = boardState[i];
+                if (id === null) return false;
+                const frog = frogsConfig.find(f => f.id === id);
+                if (!frog || frog.type !== 'L') return false;
+            }
+            return true;
+        }
+
+        function handleVictory() {
+            isGameOver = true;
+            stopTimer();
+            stopDemo();
+            audio.playVictory();
+            launchConfetti();
+
+            const cfg = LEVEL_CONFIGS[currentLevel];
+            winLevelName.textContent = cfg.name;
+            winMoves.textContent = moves;
+            winTime.textContent = timerVal.textContent.replace('s','');
+            
+            if (moves <= cfg.perfectMoves) {
+                winStars.textContent = "⭐⭐⭐";
+                winTitle.textContent = `🏆 完美演算法大師 (${cfg.perfectMoves}步無冗餘)`;
+            } else if (moves <= cfg.twoStarMoves) {
+                winStars.textContent = "⭐⭐";
+                winTitle.textContent = `🥈 運算高手 (挑戰 ${cfg.perfectMoves} 步極限吧！)`;
+            } else {
+                winStars.textContent = "⭐";
+                winTitle.textContent = "🥉 順利渡河小達人";
+            }
+
+            if (currentLevel < 4) {
+                modalNextBtn.style.display = 'inline-flex';
+                modalNextBtn.textContent = `解鎖第 ${currentLevel + 1} 關 ➔`;
+            } else {
+                modalNextBtn.style.display = 'none';
+                winHeading.textContent = '🏆 恭喜破完所有關卡！成為演算法王者！';
+            }
+
+            setTimeout(() => {
+                winOverlay.classList.add('show');
+            }, 600);
+        }
+
+        function updateStarsDisplay(currMoves) {
+            const cfg = LEVEL_CONFIGS[currentLevel];
+            if (currMoves <= cfg.perfectMoves) {
+                star1.classList.add('active');
+                star2.classList.add('active');
+                star3.classList.add('active');
+            } else if (currMoves <= cfg.twoStarMoves) {
+                star1.classList.add('active');
+                star2.classList.add('active');
+                star3.classList.remove('active');
+            } else {
+                star1.classList.add('active');
+                star2.classList.remove('active');
+                star3.classList.remove('active');
+            }
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const sec = (Date.now() - startTime) / 1000;
+                timerVal.textContent = sec.toFixed(1) + 's';
+            }, 100);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function createSVG(tag, attrs) {
+            const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+            for (const k in attrs) el.setAttribute(k, attrs[k]);
+            return el;
+        }
+
+        // ========================================================
+        // 🤖 演算法自動示範播放器核心 (Auto Demo Engine)
+        // ========================================================
+        function playDemo() {
+            if (isDemoPlaying) return;
+
+            if (moves > 0 || isGameOver) {
+                resetState();
+            }
+
+            isDemoPlaying = true;
+            demoStepIndex = 0;
+            demoPlayBtn.style.display = 'none';
+            demoPauseBtn.style.display = 'inline-flex';
+            demoStopBtn.style.display = 'inline-flex';
+            demoStatusText.textContent = `🚀 電腦正在示範【${LEVEL_CONFIGS[currentLevel].name}】...`;
+
+            executeNextDemoStep();
+        }
+
+        function executeNextDemoStep() {
+            if (!isDemoPlaying || demoStepIndex >= currentSolution.length) {
+                if (demoStepIndex >= currentSolution.length) {
+                    demoStatusText.textContent = `🎉 示範完畢！${currentSolution.length} 步完美通關！`;
+                    stopDemo(false);
+                }
+                return;
+            }
+
+            const step = currentSolution[demoStepIndex];
+            highlightStepRow(demoStepIndex);
+            demoStatusText.textContent = `第 ${demoStepIndex + 1} 步：${step.desc}`;
+
+            handleFrogJump(step.frogId, () => {
+                demoStepIndex++;
+                if (isDemoPlaying) {
+                    demoTimer = setTimeout(executeNextDemoStep, 650);
+                }
+            });
+        }
+
+        function pauseDemo() {
+            isDemoPlaying = false;
+            if (demoTimer) clearTimeout(demoTimer);
+            demoPlayBtn.style.display = 'inline-flex';
+            demoPlayBtn.textContent = '▶ 繼續播放';
+            demoPauseBtn.style.display = 'none';
+            demoStatusText.textContent = `⏸️ 已暫停於第 ${demoStepIndex} 步。您可以隨時手動點青蛙接管！`;
+        }
+
+        function stopDemo(reset = true) {
+            isDemoPlaying = false;
+            if (demoTimer) clearTimeout(demoTimer);
+            demoPlayBtn.style.display = 'inline-flex';
+            demoPlayBtn.textContent = '▶ 播放示範';
+            demoPauseBtn.style.display = 'none';
+            demoStopBtn.style.display = 'none';
+            if (reset) {
+                demoStatusText.textContent = '已切換為學生手動練習模式。';
+            }
+        }
+
+        function highlightStepRow(idx) {
+            document.querySelectorAll('.step-row').forEach(el => el.classList.remove('active'));
+            if (idx >= 0 && idx < currentSolution.length) {
+                const targetRow = document.getElementById(`step-row-${idx}`);
+                if (targetRow) {
+                    targetRow.classList.add('active');
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        }
+
+        /**
+         * 🎊 勝利彩帶噴發粒子
+         */
+        function launchConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const particles = [];
+            const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#fde047'];
+
+            for (let i = 0; i < 90; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height * 0.45,
+                    vx: (Math.random() - 0.5) * 16,
+                    vy: (Math.random() - 0.9) * 18,
+                    size: Math.random() * 8 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rot: Math.random() * 360,
+                    vRot: (Math.random() - 0.5) * 10
+                });
+            }
+
+            let frames = 0;
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.45;
+                    p.rot += p.vRot;
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot * Math.PI / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.7);
+                    ctx.restore();
+                });
+
+                frames++;
+                if (frames < 120) {
+                    requestAnimationFrame(draw);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            draw();
+        }
+
+        function exportScreenshot() {
+            if (typeof html2canvas !== 'function') {
+                alert("目前為離線環境，請使用平板或電腦的螢幕截圖快捷鍵儲存成果。");
+                return;
+            }
+            screenshotBtn.disabled = true;
+            screenshotBtn.textContent = "處理中...";
+
+            html2canvas(document.querySelector('.game-cabinet'), {
+                scale: 2,
+                backgroundColor: '#93c5fd',
+                logging: false
+            }).then(canvas => {
+                const a = document.createElement('a');
+                a.download = `青蛙過河大冒險-關卡${currentLevel}-過關記錄-${moves}步.png`;
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            }).finally(() => {
+                screenshotBtn.disabled = false;
+                screenshotBtn.textContent = "📷 成果截圖";
+            });
+        }
+
+        // 事件監聽與綁定
+        undoBtn.addEventListener('click', handleUndo);
+        resetBtn.addEventListener('click', resetState);
+        screenshotBtn.addEventListener('click', exportScreenshot);
+        modalShotBtn.addEventListener('click', exportScreenshot);
+        
+        modalReplayBtn.addEventListener('click', () => {
+            winOverlay.classList.remove('show');
+            resetState();
+        });
+
+        modalNextBtn.addEventListener('click', () => {
+            winOverlay.classList.remove('show');
+            if (currentLevel < 4) {
+                loadLevel(currentLevel + 1);
+            }
+        });
+
+        soundBtn.addEventListener('click', () => {
+            audio.enabled = !audio.enabled;
+            soundBtn.textContent = audio.enabled ? '🔊 音效: 開' : '🔇 音效: 關';
+        });
+
+        // 關卡標籤點擊
+        document.querySelectorAll('.level-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const targetLevel = parseInt(tab.dataset.level, 10);
+                if (targetLevel !== currentLevel) {
+                    loadLevel(targetLevel);
+                }
+            });
+        });
+
+        // 示範控制按鍵
+        demoPlayBtn.addEventListener('click', playDemo);
+        demoPauseBtn.addEventListener('click', pauseDemo);
+        demoStopBtn.addEventListener('click', () => stopDemo(true));
+
+        // 攻略展開與密碼
+        solutionBtn.addEventListener('click', () => {
+            if (solutionBox.classList.contains('visible')) {
+                solutionBox.classList.remove('visible');
+                stopDemo();
+            } else {
+                pwdModal.classList.add('show');
+                pwdInput.value = '';
+                pwdError.textContent = '';
+                setTimeout(() => pwdInput.focus(), 150);
+            }
+        });
+
+        cancelPwdBtn.addEventListener('click', () => pwdModal.classList.remove('show'));
+        confirmPwdBtn.addEventListener('click', () => {
+            if (pwdInput.value.trim() === "5858") {
+                pwdModal.classList.remove('show');
+                solutionBox.classList.add('visible');
+                solutionBox.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                pwdError.textContent = '❌ 密碼錯誤，請向老師索取！';
+                pwdInput.value = '';
+                pwdInput.focus();
+            }
+        });
+
+        pwdInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') confirmPwdBtn.click();
+        });
+
+        // 開工載入第 1 關 (入門 1v1)
+        loadLevel(1);
+    </script>
+</body>
+</html>
