@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>青蛙過河大冒險 (Frog River Adventure) - 水林國中資訊科技</title>
     <!-- 引入 html2canvas 支援通關獎狀截圖 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -10,31 +10,15 @@
     <style>
         /* --- 🎮 遊戲視覺設計規範 (Arcade Game UI SSOT) --- */
         :root {
-            --sky-top: #bae6fd;
-            --sky-bottom: #e0f2fe;
-            --grass-light: #86efac;
-            --grass-dark: #22c55e;
-            --water-top: #38bdf8;
-            --water-bottom: #0284c7;
-            
-            --panel-bg: rgba(255, 255, 255, 0.95);
-            --panel-border: #cbd5e1;
-            --text-title: #0f172a;
-            --text-sub: #475569;
-
-            --btn-green: #10b981;
-            --btn-green-edge: #047857;
-            --btn-blue: #3b82f6;
-            --btn-blue-edge: #1d4ed8;
-            --btn-purple: #8b5cf6;
-            --btn-purple-edge: #6d28d9;
-            --btn-amber: #f59e0b;
-            --btn-amber-edge: #b45309;
-            --btn-rose: #f43f5e;
-            --btn-rose-edge: #be123c;
+            --paper: #fffaf0;
+            --ink: #183e35;
+            --muted: #526357;
+            --line: #d6ddc9;
+            --moss: #20574b;
+            --sun: #f4cb72;
+            --btn-purple: #20574b;
 
             --touch-min: 46px; /* 適配 iPad 與智慧黑板手指點擊 */
-            --radius-game: 18px;
         }
 
         *, *::before, *::after {
@@ -45,105 +29,61 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+            font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
             margin: 0;
-            padding: 16px 12px 40px;
+            padding: clamp(12px, 4vw, 48px) clamp(8px, 3vw, 24px);
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: radial-gradient(circle at 50% 15%, #dbeafe 0%, #bfdbfe 40%, #93c5fd 100%);
-            color: var(--text-title);
-            overflow-x: hidden;
-            position: relative;
+            background:
+                radial-gradient(ellipse at 50% 0%, #417a65, transparent 68%),
+                radial-gradient(circle, #ffffff20 1px, transparent 1.5px) 0 0 / 17px 17px,
+                #193c34;
+            color: var(--ink);
         }
 
-        /* 漂浮雲朵背景裝飾 */
-        .cloud-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-        .cloud {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.45);
-            border-radius: 50px;
-            animation: floatCloud 45s linear infinite;
-        }
-        .cloud::before, .cloud::after {
-            content: '';
-            position: absolute;
-            background: inherit;
-            border-radius: 50%;
-        }
-        .c1 { width: 120px; height: 40px; top: 8%; left: -140px; animation-duration: 38s; }
-        .c1::before { width: 50px; height: 50px; top: -20px; left: 20px; }
-        .c1::after { width: 40px; height: 40px; top: -14px; right: 20px; }
-        .c2 { width: 160px; height: 48px; top: 18%; left: -200px; animation-duration: 52s; animation-delay: 15s; }
-        .c2::before { width: 64px; height: 64px; top: -28px; left: 30px; }
-        .c2::after { width: 52px; height: 52px; top: -18px; right: 30px; }
-
-        @keyframes floatCloud {
-            from { transform: translateX(0); }
-            to { transform: translateX(calc(100vw + 240px)); }
-        }
-
-        /* 主遊戲視窗容器 */
         .game-cabinet {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            max-width: 960px;
-            background: var(--panel-bg);
-            border: 4px solid #ffffff;
+            max-width: 1020px;
+            margin: 0 auto;
+            background: var(--paper);
+            border: 1px solid #dfe5cd;
             border-radius: 28px;
-            box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
-            padding: 20px 24px 28px;
-            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 60px #0a221d66;
+            padding: clamp(12px, 3vw, 30px);
             text-align: center;
         }
 
-        /* --- 遊戲頂部抬頭列 (HUD Bar) --- */
         .hud-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-end;
             flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 14px 24px;
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--line);
         }
 
-        .game-title-group {
-            text-align: left;
+        .game-title-group { text-align: left; }
+
+        .game-kicker {
+            margin: 0 0 6px;
+            color: var(--moss);
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.14em;
         }
 
         .game-title {
-            font-size: 1.85rem;
+            font-family: "Kaiti TC", "BiauKai", "Noto Serif TC", serif;
+            font-size: clamp(1.8rem, 5vw, 3.15rem);
             font-weight: 800;
-            margin: 0;
-            color: #0f172a;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-shadow: 0 2px 4px rgba(255,255,255,0.8);
-        }
-
-        .game-badge {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #ffffff;
-            background: linear-gradient(135deg, #10b981, #059669);
-            padding: 3px 10px;
-            border-radius: 20px;
-            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
-            vertical-align: middle;
+            line-height: 1.1;
+            letter-spacing: 0.025em;
+            margin: 0 0 8px;
         }
 
         .game-desc {
             font-size: 0.9rem;
-            color: var(--text-sub);
+            color: var(--muted);
             margin: 2px 0 0 0;
             font-weight: 500;
         }
@@ -152,12 +92,11 @@
         .dashboard-capsule {
             display: inline-flex;
             align-items: center;
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 50px;
-            padding: 6px 18px;
-            gap: 16px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
+            background: #eaf0df;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 7px 12px;
+            gap: clamp(8px, 2vw, 16px);
         }
 
         .dash-item {
@@ -172,8 +111,8 @@
         .dash-num {
             font-size: 1.25rem;
             font-weight: 800;
-            color: #0284c7;
-            min-width: 42px;
+            color: var(--ink);
+            min-width: 30px;
             text-align: left;
             font-feature-settings: "tnum";
         }
@@ -196,74 +135,62 @@
            🪜 階梯式鷹架關卡切換列 (Scaffolding Level Selector)
            ======================================================== */
         .level-selector-row {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 12px;
         }
 
         .level-tab {
-            min-height: var(--touch-min);
-            padding: 6px 16px;
-            border-radius: 14px;
-            border: 2px solid #cbd5e1;
-            background: #ffffff;
-            color: #475569;
+            min-height: 60px;
+            display: grid;
+            align-content: center;
+            justify-items: start;
+            gap: 3px;
+            padding: 8px 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #f1f2e5;
+            color: var(--ink);
+            font: inherit;
+            font-size: 0.9rem;
             font-weight: 800;
-            font-size: 0.92rem;
+            text-align: left;
             cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 3px 0 #94a3b8, 0 4px 6px rgba(0,0,0,0.05);
         }
 
-        .level-tab:hover {
-            transform: translateY(-2px);
-            border-color: #38bdf8;
-            color: #0284c7;
-            box-shadow: 0 5px 0 #94a3b8;
-        }
+        .level-tab:hover { border-color: var(--moss); }
 
         .level-tab.active {
-            background: linear-gradient(135deg, #0284c7, #0369a1);
-            border-color: #0284c7;
-            color: #ffffff;
-            transform: translateY(2px);
-            box-shadow: 0 1px 0 #075985;
+            background: var(--moss);
+            border-color: var(--moss);
+            color: var(--paper);
+            box-shadow: inset 0 -4px var(--sun);
         }
 
-        .level-tab .tab-badge {
-            font-size: 0.75rem;
-            padding: 2px 7px;
-            border-radius: 10px;
-            background: #f1f5f9;
-            color: #475569;
-        }
-        .level-tab.active .tab-badge {
-            background: rgba(255, 255, 255, 0.25);
-            color: #ffffff;
+        .tab-badge {
+            color: var(--muted);
+            font-family: ui-monospace, monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.12em;
         }
 
-        /* --- 遊戲規則便利貼卡片 --- */
+        .level-tab.active .tab-badge { color: var(--sun); }
+
         .rules-ribbon {
-            background: #fffbeb;
-            border: 2px dashed #fde68a;
-            border-radius: 14px;
-            padding: 10px 16px;
-            margin-bottom: 16px;
+            background: #f7edce;
+            border-radius: 10px;
+            padding: 9px 12px;
+            margin-bottom: 12px;
             display: flex;
-            justify-content: space-around;
-            align-items: center;
+            justify-content: center;
             flex-wrap: wrap;
-            gap: 8px 16px;
-            font-size: 0.875rem;
-            color: #92400e;
+            gap: 6px 16px;
+            font-size: 0.85rem;
+            color: #584527;
             font-weight: 600;
         }
+
         .rule-tag {
             display: flex;
             align-items: center;
@@ -273,10 +200,9 @@
         /* --- 遊戲池塘舞台主畫布 --- */
         .pond-stage {
             position: relative;
-            background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 30%, #0284c7 80%, #0369a1 100%);
-            border: 5px solid #075985;
-            border-radius: 24px;
-            box-shadow: inset 0 6px 14px rgba(0,0,0,0.25), 0 8px 16px rgba(3, 105, 161, 0.25);
+            background: #17665f;
+            border: 1px solid #1b554b;
+            border-radius: 17px;
             overflow: hidden;
             margin: 0 auto;
         }
@@ -285,7 +211,6 @@
             display: block;
             width: 100%;
             height: auto;
-            max-width: 900px;
             margin: 0 auto;
         }
 
@@ -331,13 +256,11 @@
             display: block !important;
         }
 
-        /* --- 3D 質感遊戲按鈕列 (Juicy Buttons) --- */
         .game-controls {
             display: flex;
             justify-content: center;
-            align-items: center;
-            gap: 12px;
-            margin-top: 20px;
+            gap: 8px;
+            margin-top: 12px;
             flex-wrap: wrap;
         }
 
@@ -345,62 +268,43 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
             min-height: var(--touch-min);
-            padding: 0 18px;
-            font-size: 0.95rem;
+            padding: 6px 14px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #edf1e2;
+            color: var(--ink);
+            font: inherit;
+            font-size: 0.9rem;
             font-weight: 800;
-            color: #ffffff;
-            border: none;
-            border-radius: 14px;
             cursor: pointer;
-            transition: all 0.1s ease;
-            position: relative;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.25);
         }
 
-        /* 3D 按壓立體感實作 */
+        .game-btn:hover:not(:disabled) { border-color: var(--moss); }
+        .game-btn:active:not(:disabled) { transform: translateY(1px); }
+        button:focus-visible { outline: 3px solid #a65c20; outline-offset: 2px; }
+
         .btn-undo {
-            background: var(--btn-blue);
-            box-shadow: 0 5px 0 var(--btn-blue-edge), 0 8px 12px rgba(29, 78, 216, 0.3);
+            background: var(--moss);
+            border-color: var(--moss);
+            color: var(--paper);
         }
-        .btn-undo:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 7px 0 var(--btn-blue-edge); }
-        .btn-undo:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--btn-blue-edge); }
 
-        .btn-reset {
-            background: var(--btn-green);
-            box-shadow: 0 5px 0 var(--btn-green-edge), 0 8px 12px rgba(4, 120, 87, 0.3);
+        .btn-solution, .btn-amber { background: #f5dfaa; }
+        .game-btn:disabled { opacity: 0.48; cursor: not-allowed; }
+
+        @media (max-width: 580px) {
+            .level-selector-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .rules-ribbon { justify-content: flex-start; text-align: left; }
+            .game-controls > button { flex: 1 1 auto; }
         }
-        .btn-reset:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 7px 0 var(--btn-green-edge); }
-        .btn-reset:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--btn-green-edge); }
 
-        .btn-sound {
-            background: #64748b;
-            box-shadow: 0 5px 0 #334155, 0 8px 12px rgba(51, 65, 85, 0.25);
-        }
-        .btn-sound:hover { background: #475569; transform: translateY(-2px); box-shadow: 0 7px 0 #334155); }
-        .btn-sound:active { transform: translateY(4px); box-shadow: 0 1px 0 #334155); }
-
-        .btn-solution {
-            background: var(--btn-purple);
-            box-shadow: 0 5px 0 var(--btn-purple-edge), 0 8px 12px rgba(109, 40, 217, 0.3);
-        }
-        .btn-solution:hover { background: #7c3aed; transform: translateY(-2px); box-shadow: 0 7px 0 var(--btn-purple-edge); }
-        .btn-solution:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--btn-purple-edge); }
-
-        .btn-screenshot {
-            background: var(--btn-amber);
-            box-shadow: 0 5px 0 var(--btn-amber-edge), 0 8px 12px rgba(180, 83, 9, 0.3);
-        }
-        .btn-screenshot:hover { background: #d97706; transform: translateY(-2px); box-shadow: 0 7px 0 var(--btn-amber-edge); }
-        .btn-screenshot:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--btn-amber-edge); }
-
-        .game-btn:disabled {
-            background: #94a3b8 !important;
-            box-shadow: 0 4px 0 #64748b !important;
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
+        @media (prefers-reduced-motion: reduce) {
+            .frog-group.can-move .frog-anim {
+                animation: none;
+                filter: drop-shadow(0 0 4px #fff1ab);
+            }
         }
 
         /* 遊戲訊息橫幅 */
@@ -418,6 +322,7 @@
             transform: scale(0.95);
             transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
+        #game-banner:empty { display: none; }
         #game-banner.show { opacity: 1; transform: scale(1); }
         #game-banner.deadlock {
             background: #fee2e2;
@@ -438,7 +343,7 @@
             display: none;
             margin-top: 24px;
             background: #ffffff;
-            border: 3px solid #e9d5ff;
+            border: 3px solid #d6ddc9;
             border-radius: 20px;
             padding: 22px;
             text-align: left;
@@ -450,14 +355,14 @@
         .sol-header {
             font-size: 1.35rem;
             font-weight: 800;
-            color: #6b21a8;
+            color: #20574b;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 16px;
-            border-bottom: 2px solid #f3e8ff;
+            border-bottom: 2px solid #eaf0df;
             padding-bottom: 12px;
         }
 
@@ -469,15 +374,15 @@
             margin-bottom: 20px;
         }
         .mantra-card {
-            background: #faf5ff;
-            border: 2px solid #e9d5ff;
+            background: #f1f2e5;
+            border: 2px solid #d6ddc9;
             border-radius: 14px;
             padding: 14px 16px;
         }
         .mantra-card h4 {
             margin: 0 0 6px 0;
             font-size: 1.05rem;
-            color: #7e22ce;
+            color: #20574b;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -591,9 +496,9 @@
         #win-overlay.show { display: flex; animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
         .win-card {
-            background: #ffffff;
-            border-radius: 28px;
-            border: 6px solid #facc15;
+            background: var(--paper);
+            border-radius: 24px;
+            border: 4px solid var(--sun);
             box-shadow: 0 20px 40px rgba(0,0,0,0.3);
             padding: 28px 24px;
             max-width: 440px;
@@ -679,12 +584,6 @@
 </head>
 <body>
 
-    <!-- 漂浮背景雲 -->
-    <div class="cloud-bg">
-        <div class="cloud c1"></div>
-        <div class="cloud c2"></div>
-    </div>
-
     <!-- 慶祝彩帶畫布 -->
     <canvas id="confetti-canvas"></canvas>
 
@@ -694,10 +593,8 @@
         <!-- HUD 儀表列 -->
         <div class="hud-header">
             <div class="game-title-group">
-                <h1 class="game-title">
-                    🐸 青蛙過河大冒險
-                    <span class="game-badge">經典演算法</span>
-                </h1>
+                <p class="game-kicker">水林國中資訊科技 · 演算法體驗</p>
+                <h1 class="game-title">青蛙過河大冒險</h1>
                 <p id="level-subtitle" class="game-desc">觀察規律 • 找出階梯對調的最短路徑</p>
             </div>
 
@@ -720,19 +617,19 @@
         <!-- 🪜 階梯式鷹架關卡切換列 -->
         <div class="level-selector-row">
             <button class="level-tab active" data-level="1">
-                <span class="tab-badge">Level 1</span>
+                <span class="tab-badge">LEVEL 01</span>
                 <span>🌱 入門 1v1 (3步)</span>
             </button>
             <button class="level-tab" data-level="2">
-                <span class="tab-badge">Level 2</span>
+                <span class="tab-badge">LEVEL 02</span>
                 <span>🌿 基礎 2v2 (8步)</span>
             </button>
             <button class="level-tab" data-level="3">
-                <span class="tab-badge">Level 3</span>
+                <span class="tab-badge">LEVEL 03</span>
                 <span>👑 核心 3v3 (15步)</span>
             </button>
             <button class="level-tab" data-level="4">
-                <span class="tab-badge">Level 4</span>
+                <span class="tab-badge">LEVEL 04</span>
                 <span>🔥 挑戰 4v4 (24步)</span>
             </button>
         </div>
@@ -746,6 +643,11 @@
         <div class="pond-stage">
             <svg id="game-svg" viewBox="0 0 880 260" xmlns="http://www.w3.org/2000/svg">
                 <defs>
+                    <linearGradient id="pond-water" x2="0" y2="1">
+                        <stop stop-color="#72bca5"/>
+                        <stop offset="48%" stop-color="#398c7c"/>
+                        <stop offset="100%" stop-color="#145650"/>
+                    </linearGradient>
                     <!-- 荷葉漸層立體光影 -->
                     <linearGradient id="pad-top" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" stop-color="#86efac" />
@@ -776,18 +678,17 @@
                     </filter>
                 </defs>
 
-                <!-- 水波波光背景裝飾 -->
-                <path d="M 40 80 Q 200 65 360 80 T 680 80" stroke="#bae6fd" stroke-width="3" fill="none" opacity="0.3" stroke-linecap="round"/>
-                <path d="M 120 120 Q 300 105 480 120 T 800 120" stroke="#bae6fd" stroke-width="2.5" fill="none" opacity="0.25" stroke-linecap="round"/>
-                
-                <!-- 池邊裝飾睡蓮花 -->
-                <g transform="translate(45, 205)">
-                    <ellipse cx="0" cy="0" rx="20" ry="8" fill="#ec4899" opacity="0.8"/>
-                    <circle cx="0" cy="-3" r="5" fill="#fde047"/>
-                </g>
-                <g transform="translate(835, 200)">
-                    <ellipse cx="0" cy="0" rx="18" ry="7" fill="#f472b6" opacity="0.8"/>
-                    <circle cx="0" cy="-2" r="4" fill="#fef08a"/>
+                <!-- 池水、遠岸與岸邊蘆葦 -->
+                <g aria-hidden="true" pointer-events="none">
+                    <path fill="url(#pond-water)" d="M0 0H880V260H0z"/>
+                    <circle cx="716" cy="43" r="25" fill="#ffe5a5" opacity=".92"/>
+                    <path d="M0 63Q82 12 183 53T385 58Q487 25 584 65Q662 40 740 66Q816 40 880 55V83H0Z" fill="#447e61"/>
+                    <path d="M0 67Q101 46 209 67T414 67Q506 52 604 75T880 65V90Q802 74 728 90T533 88T340 88T139 85T0 92Z" fill="#2b6955"/>
+                    <path d="M76 109q47-5 93 0m53 16q62-6 123 0m54-19q47-5 96 0m129 6q49-5 97 0m-149 20q38-4 76 0m70-39q35-3 71 0m-709 138q54-6 108 0m214 5q48-5 96 0m194-5q55-7 107 0" fill="none" stroke="#cce8c9" stroke-width="2" stroke-linecap="round" opacity=".5"/>
+                    <path d="M0 235Q34 215 94 260H0ZM880 228Q841 217 785 260H880Z" fill="#163f36"/>
+                    <path d="M20 251Q20 226 8 209Q27 216 29 245Q36 218 51 217Q40 228 38 254M846 248Q841 225 826 213Q847 217 853 241Q853 216 867 204Q859 224 863 251" fill="#76a775"/>
+                    <path d="M125 239q13-12 29-4l-9 6 14-2q-8 11-34 4zM745 236q12-10 25-4l-7 5 12-2q-8 10-30 4z" fill="#78ab72"/>
+                    <path d="M142 238q-13-5-11-12 7 0 11 6-2-8 2-12 5 4 3 12 6-6 12-5 0 7-12 11z" fill="#ffd4a0"/>
                 </g>
 
                 <!-- 荷葉層 -->
@@ -804,7 +705,7 @@
         <!-- 遊戲操作按鍵列 (3D Juicy Buttons) -->
         <div class="game-controls">
             <button id="undo-btn" class="game-btn btn-undo" title="回退到上一步驟">
-                ↩️ 上一步 (Undo)
+                ↩️ 上一步
             </button>
             <button id="reset-btn" class="game-btn btn-reset" title="重新開始此局">
                 ↻ 重新開始
@@ -813,7 +714,7 @@
                 🔊 音效: 開
             </button>
             <button id="solution-btn" class="game-btn btn-solution" title="解密通關演算法">
-                📖 白話攻略與自動示範
+                📖 攻略與示範
             </button>
             <button id="screenshot-btn" class="game-btn btn-screenshot" title="儲存通關畫面">
                 📷 成果截圖
@@ -828,19 +729,19 @@
              ======================================================== -->
         <div id="solution-box">
             <div class="sol-header">
-                <div>📖 演算法通關秘笈（看口訣＋看示範）</div>
-                <div id="sol-pad-count-info" style="font-size: 0.85rem; font-weight: normal; color: #7e22ce;">荷葉編號</div>
+                <div>📖 演算法通關秘笈（看提示＋看示範）</div>
+                <div id="sol-pad-count-info" style="font-size: 0.85rem; font-weight: normal; color: #20574b;">荷葉編號</div>
             </div>
             
-            <!-- 兩大白話口訣 -->
+            <!-- 觀察盤面與選步提示 -->
             <div class="mantra-grid">
                 <div class="mantra-card">
-                    <h4>🐸 心法一：能跳就跳，絕不猶豫！</h4>
-                    <p>只要前方隔著「不同顏色」的青蛙可以<strong>跨跳</strong>，就一定要跳！千萬不要自己默默往前滑步，否則很容易把別人的路卡死。</p>
+                    <h4>🐸 先找空荷葉</h4>
+                    <p>看看哪些青蛙能朝自己的方向滑一步，或跨過一隻青蛙，落到空荷葉上。</p>
                 </div>
                 <div class="mantra-card">
-                    <h4>🐸 心法二：同色青蛙絕不手牽手！</h4>
-                    <p>在過河過程中，<strong>絕對不能讓兩隻同色青蛙排在相鄰空格</strong>（除非已經平安抵達對岸終點）。一旦同色相碰，下一秒必定卡死！</p>
+                    <h4>🐸 想一想下一步</h4>
+                    <p>如果有兩隻都能動，想想各自移動後，空荷葉會在哪裡。卡住時，可以按「上一步」，試試另一種走法。</p>
                 </div>
             </div>
 
@@ -880,6 +781,9 @@
                 消耗時間：<span id="win-time" style="color: #059669; font-size: 1.3rem;">0.0</span> 秒<br>
                 評等稱號：<span id="win-title" style="color: #7c3aed; font-weight: 800;">完美演算法大師</span>
             </div>
+            <p style="margin: 0 0 12px; color: #334155;">
+                <strong>想一想</strong>　如果要讓電腦自己過關，你會怎麼告訴它下一步該移動哪一隻？
+            </p>
             <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
                 <button id="modal-next-btn" class="game-btn btn-undo" style="flex: 1 1 120px;">下一關 ➔</button>
                 <button id="modal-replay-btn" class="game-btn btn-reset" style="flex: 1 1 100px;">再玩一局 ↺</button>
@@ -1085,7 +989,9 @@
         let moves = 0;
         let gameStarted = false;
         let isAnimating = false;
+        let jumpFrameId = null;
         let isGameOver = false;
+        let winOverlayTimer = null;
 
         // 🤖 自動示範控制器
         let demoTimer = null;
@@ -1441,6 +1347,11 @@
         }
 
         function resetState() {
+            cancelAnimationFrame(jumpFrameId);
+            jumpFrameId = null;
+            clearTimeout(winOverlayTimer);
+            winOverlayTimer = null;
+            winOverlay.classList.remove('show');
             stopDemo();
             boardState = [...initialLayout];
             historyStack = [];
@@ -1630,14 +1541,15 @@
                 if (animEl) animEl.setAttribute('transform', `scale(${scaleX}, ${scaleY})`);
                 
                 if (progress < 1) {
-                    requestAnimationFrame(frame);
+                    jumpFrameId = requestAnimationFrame(frame);
                 } else {
+                    jumpFrameId = null;
                     frogGroup.setAttribute('transform', `translate(${endX}, ${baseY})`);
                     if (animEl) animEl.removeAttribute('transform');
                     if (onComplete) onComplete();
                 }
             }
-            requestAnimationFrame(frame);
+            jumpFrameId = requestAnimationFrame(frame);
         }
 
         function createWaterSplash(x, y) {
@@ -1682,7 +1594,7 @@
                 stopTimer();
                 stopDemo();
                 audio.playDeadlock();
-                gameBanner.textContent = '⚠️ 兩隊相撞卡死了！點擊「上一步」回退即可解套！';
+                gameBanner.textContent = '⚠️ 現在沒有青蛙能往前移動。按「上一步」回退，再找找有沒有其他走法！';
                 gameBanner.className = 'show deadlock';
                 document.querySelectorAll('.frog-group').forEach(el => el.classList.add('deadlock'));
             }
@@ -1732,6 +1644,7 @@
             }
 
             if (currentLevel < 4) {
+                winHeading.textContent = '恭喜過河大成功！';
                 modalNextBtn.style.display = 'inline-flex';
                 modalNextBtn.textContent = `解鎖第 ${currentLevel + 1} 關 ➔`;
             } else {
@@ -1739,7 +1652,8 @@
                 winHeading.textContent = '🏆 恭喜破完所有關卡！成為演算法王者！';
             }
 
-            setTimeout(() => {
+            winOverlayTimer = setTimeout(() => {
+                winOverlayTimer = null;
                 winOverlay.classList.add('show');
             }, 600);
         }
@@ -1866,7 +1780,7 @@
             canvas.height = window.innerHeight;
 
             const particles = [];
-            const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#fde047'];
+            const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#367464', '#ec4899', '#fde047'];
 
             for (let i = 0; i < 90; i++) {
                 particles.push({
