@@ -985,9 +985,11 @@
         let boardState = [];
         let historyStack = [];
         let startTime = 0;
+        let pausedElapsed = 0;
         let timerInterval = null;
         let moves = 0;
         let gameStarted = false;
+        let usedDemo = false;
         let isAnimating = false;
         let jumpFrameId = null;
         let isGameOver = false;
@@ -1356,6 +1358,9 @@
             boardState = [...initialLayout];
             historyStack = [];
             gameStarted = false;
+            usedDemo = false;
+            startTime = 0;
+            pausedElapsed = 0;
             moves = 0;
             isGameOver = false;
             stopTimer();
@@ -1505,6 +1510,11 @@
             gameBanner.className = '';
             document.querySelectorAll('.frog-group').forEach(el => el.classList.remove('deadlock'));
 
+            // 若先前因死局停表，按「上一步」後無縫接續計時
+            if (gameStarted && !isDemoPlaying && !timerInterval) {
+                startTimer(pausedElapsed);
+            }
+
             audio.playUndo();
             updateFrogsPosition();
             undoBtn.disabled = historyStack.length === 0;
@@ -1628,9 +1638,11 @@
             launchConfetti();
 
             const cfg = LEVEL_CONFIGS[currentLevel];
+            const finalSecText = gameStarted ? (pausedElapsed / 1000).toFixed(1) : '0.0';
+            timerVal.textContent = finalSecText + 's';
             winLevelName.textContent = cfg.name;
             winMoves.textContent = moves;
-            winTime.textContent = timerVal.textContent.replace('s','');
+            winTime.textContent = usedDemo ? `${finalSecText} (示範)` : finalSecText;
             
             if (moves <= cfg.perfectMoves) {
                 winStars.textContent = "⭐⭐⭐";
@@ -1675,19 +1687,24 @@
             }
         }
 
-        function startTimer() {
+        function startTimer(initialElapsedMs = 0) {
             if (timerInterval) clearInterval(timerInterval);
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
+            startTime = Date.now() - initialElapsedMs;
+            const updateDisplay = () => {
                 const sec = (Date.now() - startTime) / 1000;
                 timerVal.textContent = sec.toFixed(1) + 's';
-            }, 100);
+            };
+            updateDisplay();
+            timerInterval = setInterval(updateDisplay, 100);
         }
 
         function stopTimer() {
             if (timerInterval) {
                 clearInterval(timerInterval);
                 timerInterval = null;
+                if (gameStarted && startTime > 0) {
+                    pausedElapsed = Math.max(0, Date.now() - startTime);
+                }
             }
         }
 
@@ -1708,6 +1725,7 @@
             }
 
             isDemoPlaying = true;
+            usedDemo = true;
             demoStepIndex = 0;
             demoPlayBtn.style.display = 'none';
             demoPauseBtn.style.display = 'inline-flex';
